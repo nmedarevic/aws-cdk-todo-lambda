@@ -8,7 +8,10 @@
     "build": "tsc",
     "watch": "tsc -w",
     "test": "jest",
-    "cdk": "cdk"
+    "cdk": "cdk",
+    "synth": "cdk synth",
+    "test-save-todo": "sam local invoke -t ./cdk.out/BackendStack.template.json -e ./events/save-todo.event.json",
+    "start-local-api": "sam local start-api -t ./cdk.out/BackendStack.template.json"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.131",
