@@ -62,7 +62,23 @@ export class BackendStack extends cdk.Stack {
       }
     })
 
+    /**
+     * Lambda function for getting TODOs
+     */
+    const getTodoLambda = new NodejsFunction(this, "lambda-get-todo", {
+      // code: lambda.AssetCode.fromAsset("lambda"),
+      runtime: lambda.Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, "../src/lambda/get-todo.lambda.ts"),
+      functionName: "labmda-save-todo",
+      handler: "handler",
+      role: role,
+      environment: {
+        TABLE: table.tableName,
+      },
+    })
+
     table.grantFullAccess(saveTodoLambda)
+    table.grantReadData(getTodoLambda)
 
     const lambdaSaveTodoLogGroup = new LogGroup(this, '/aws/lambda/save-todo', {
       retention: RetentionDays.ONE_DAY,
@@ -79,18 +95,26 @@ export class BackendStack extends cdk.Stack {
       corsPreflight: {
         allowMethods: [
           CorsHttpMethod.POST,
+          CorsHttpMethod.GET,
         ],
         allowOrigins: ["*"],
       },
     });
 
     const saveTodoLambdaIntegration = new HttpLambdaIntegration('TemplateIntegration', saveTodoLambda);
+    const getTodoLambdaIntegration = new HttpLambdaIntegration('TemplateIntegration', getTodoLambda);
 
     // Create a resource and method for the API
     httpApi.addRoutes({
       path: '/todo',
       methods: [HttpMethod.POST],
       integration: saveTodoLambdaIntegration,
+    });
+
+    httpApi.addRoutes({
+      path: '/todo',
+      methods: [HttpMethod.GET],
+      integration: getTodoLambdaIntegration,
     });
 
     // Output the API endpoint URL
