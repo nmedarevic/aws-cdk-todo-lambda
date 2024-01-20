@@ -123,6 +123,6 @@
     "httpMethod": "POST",
     "apiId": "gy415nuibc"
   },
-  "body": "{\r\n\t\"a\": 1\r\n}",
+  "body": "{\"text\":\"First todo\"}",
   "isBase64Encoded": false
 }
