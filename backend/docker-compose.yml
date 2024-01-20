@@ -1,0 +1,33 @@
+version: "2.1"
+services:
+  localstack:
+    image: localstack/localstack
+    ports:
+      - "53:53"
+      - "443:443"
+      - "4510-4520:4510-4520"
+      - "4566-4620:4566-4620"
+      - "8000:8000"
+      - "${PORT_WEB_UI-8080}:${PORT_WEB_UI-8080}"
+    environment:
+      - LOCALSTACK_API_KEY="ls-huXunADu-MATA-DeQo-mAsi-181941738f83"
+      - HOSTNAME_EXTERNAL=localstack
+      - DEBUG=1
+      - USE_SSL=0
+      - AWS_CBOR_DISABLE=1
+      - SERVICES=dynamodb
+      - DATA_DIR=/tmp/localstack-1/data
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - LAMBDA_EXECUTOR=docker
+      - LAMBDA_NETWORK=bridge
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    tmpfs:
+      - /tmp/localstack-1:exec,mode=600
+    networks:
+      - "lambda-local"
+
+networks:
+  lambda-local:
+    name: lambda-local
+    external: true
