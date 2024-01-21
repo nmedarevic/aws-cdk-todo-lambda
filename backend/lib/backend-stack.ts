@@ -77,8 +77,24 @@ export class BackendStack extends cdk.Stack {
       },
     })
 
+    /**
+     * Lambda function for updating todos
+     */
+    const updateTodoLambda = new NodejsFunction(this, "lambda-update-todo", {
+      // code: lambda.AssetCode.fromAsset("lambda"),
+      runtime: lambda.Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, "../src/lambda/update-todo.lambda.ts"),
+      functionName: "labmda-save-todo",
+      handler: "handler",
+      role: role,
+      environment: {
+        TABLE: table.tableName,
+      },
+    })
+
     table.grantFullAccess(saveTodoLambda)
     table.grantReadData(getTodoLambda)
+    table.grantReadWriteData(updateTodoLambda)
 
     const lambdaSaveTodoLogGroup = new LogGroup(this, '/aws/lambda/save-todo', {
       retention: RetentionDays.ONE_DAY,
@@ -88,6 +104,23 @@ export class BackendStack extends cdk.Stack {
       principals: [new iam.ServicePrincipal('lambda.amazonaws.com')],
       resources: [lambdaSaveTodoLogGroup.logGroupArn],
     }));
+    const lambdaGetTodoLogGroup = new LogGroup(this, '/aws/lambda/get-todo', {
+      retention: RetentionDays.ONE_DAY,
+    });
+    lambdaGetTodoLogGroup.addToResourcePolicy(new iam.PolicyStatement({
+      actions: ['logs:CreateLogStream', 'logs:PutLogEvents'],
+      principals: [new iam.ServicePrincipal('lambda.amazonaws.com')],
+      resources: [lambdaGetTodoLogGroup.logGroupArn],
+    }));
+    const lambdaUpdateTodoLogGroup = new LogGroup(this, '/aws/lambda/update-todo', {
+      retention: RetentionDays.ONE_DAY,
+    });
+    lambdaUpdateTodoLogGroup.addToResourcePolicy(new iam.PolicyStatement({
+      actions: ['logs:CreateLogStream', 'logs:PutLogEvents'],
+      principals: [new iam.ServicePrincipal('lambda.amazonaws.com')],
+      resources: [lambdaUpdateTodoLogGroup.logGroupArn],
+    }));
+    
 
     // Create an API Gateway
     const httpApi = new HttpApi(this, "lambda-todo-api", {
@@ -96,6 +129,7 @@ export class BackendStack extends cdk.Stack {
         allowMethods: [
           CorsHttpMethod.POST,
           CorsHttpMethod.GET,
+          CorsHttpMethod.PUT,
         ],
         allowOrigins: ["*"],
       },
@@ -103,6 +137,7 @@ export class BackendStack extends cdk.Stack {
 
     const saveTodoLambdaIntegration = new HttpLambdaIntegration('TemplateIntegration', saveTodoLambda);
     const getTodoLambdaIntegration = new HttpLambdaIntegration('TemplateIntegration', getTodoLambda);
+    const updateTodoLambdaIntegration = new HttpLambdaIntegration('TemplateIntegration', updateTodoLambda);
 
     // Create a resource and method for the API
     httpApi.addRoutes({
@@ -115,6 +150,12 @@ export class BackendStack extends cdk.Stack {
       path: '/todo',
       methods: [HttpMethod.GET],
       integration: getTodoLambdaIntegration,
+    });
+
+    httpApi.addRoutes({
+      path: '/todo',
+      methods: [HttpMethod.PUT],
+      integration: updateTodoLambdaIntegration,
     });
 
     // Output the API endpoint URL

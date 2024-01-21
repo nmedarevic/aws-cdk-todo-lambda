@@ -17,7 +17,7 @@ export async function handler(event: APIGatewayProxyEvent, context: Context): Pr
   console.log('\n\n', event.queryStringParameters, '\n\n');
 
   if (event.queryStringParameters == null || typeof event.queryStringParameters.id === "undefined") {
-    throw new Error("Missing id")
+    throw new Error("[Get Todo Lambda] Missing id")
   }
 
   const todoId = event.queryStringParameters.id;
@@ -31,7 +31,7 @@ export async function handler(event: APIGatewayProxyEvent, context: Context): Pr
     } as DynamoDB.Types.GetItemInput).promise()
 
     if (!result.Item) {
-      throw new Error("Todo not found")
+      throw new Error("[Get Todo Lambda] Todo not found")
     }
 
     return {
@@ -39,7 +39,7 @@ export async function handler(event: APIGatewayProxyEvent, context: Context): Pr
       body: JSON.stringify(result.Item)
     }
   } catch (error) {
-    console.error("Error while getting todo", error);
+    console.error("[Get Todo Lambda] Error while getting todo", error);
 
     return {
       statusCode: 404,
