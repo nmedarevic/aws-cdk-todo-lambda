@@ -13,6 +13,7 @@
     "test-save-todo": "AWS_REGION=eu-central-1 sam local invoke -t ./cdk.out/BackendStack.template.json -e ./events/save-todo.event.json --docker-network lambda-local lambda-save-todo",
     "test-get-todo": "sam local invoke -t ./cdk.out/BackendStack.template.json -e ./events/get-todo.event.json --docker-network lambda-local lambda-get-todo",
     "test-update-todo": "sam local invoke -t ./cdk.out/BackendStack.template.json -e ./events/update-todo.event.json --docker-network lambda-local lambda-update-todo",
+    "test-delete-todo": "sam local invoke -t ./cdk.out/BackendStack.template.json -e ./events/delete-todo.event.json --docker-network lambda-local lambda-delete-todo",
     "start-local-api": "sam local start-api -t ./cdk.out/BackendStack.template.json",
     "local": "cdklocal"
   },

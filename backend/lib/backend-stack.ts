@@ -84,7 +84,22 @@ export class BackendStack extends cdk.Stack {
       // code: lambda.AssetCode.fromAsset("lambda"),
       runtime: lambda.Runtime.NODEJS_20_X,
       entry: path.join(__dirname, "../src/lambda/update-todo.lambda.ts"),
-      functionName: "labmda-save-todo",
+      functionName: "labmda-update-todo",
+      handler: "handler",
+      role: role,
+      environment: {
+        TABLE: table.tableName,
+      },
+    })
+
+    /**
+     * Lambda function for deleting todos
+     */
+    const deleteTodoLambda = new NodejsFunction(this, "lambda-delete-todo", {
+      // code: lambda.AssetCode.fromAsset("lambda"),
+      runtime: lambda.Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, "../src/lambda/delete-todo.lambda.ts"),
+      functionName: "labmda-delete-todo",
       handler: "handler",
       role: role,
       environment: {
@@ -95,6 +110,7 @@ export class BackendStack extends cdk.Stack {
     table.grantFullAccess(saveTodoLambda)
     table.grantReadData(getTodoLambda)
     table.grantReadWriteData(updateTodoLambda)
+    table.grantWriteData(deleteTodoLambda)
 
     const lambdaSaveTodoLogGroup = new LogGroup(this, '/aws/lambda/save-todo', {
       retention: RetentionDays.ONE_DAY,
@@ -120,7 +136,15 @@ export class BackendStack extends cdk.Stack {
       principals: [new iam.ServicePrincipal('lambda.amazonaws.com')],
       resources: [lambdaUpdateTodoLogGroup.logGroupArn],
     }));
-    
+    const lambdaDeleteTodoLogGroup = new LogGroup(this, '/aws/lambda/delete-todo', {
+      retention: RetentionDays.ONE_DAY,
+    });
+    lambdaDeleteTodoLogGroup.addToResourcePolicy(new iam.PolicyStatement({
+      actions: ['logs:CreateLogStream', 'logs:PutLogEvents'],
+      principals: [new iam.ServicePrincipal('lambda.amazonaws.com')],
+      resources: [lambdaDeleteTodoLogGroup.logGroupArn],
+    }));
+
 
     // Create an API Gateway
     const httpApi = new HttpApi(this, "lambda-todo-api", {
@@ -130,6 +154,7 @@ export class BackendStack extends cdk.Stack {
           CorsHttpMethod.POST,
           CorsHttpMethod.GET,
           CorsHttpMethod.PUT,
+          CorsHttpMethod.DELETE,
         ],
         allowOrigins: ["*"],
       },
@@ -138,6 +163,7 @@ export class BackendStack extends cdk.Stack {
     const saveTodoLambdaIntegration = new HttpLambdaIntegration('TemplateIntegration', saveTodoLambda);
     const getTodoLambdaIntegration = new HttpLambdaIntegration('TemplateIntegration', getTodoLambda);
     const updateTodoLambdaIntegration = new HttpLambdaIntegration('TemplateIntegration', updateTodoLambda);
+    const deleteTodoLambdaIntegration = new HttpLambdaIntegration('TemplateIntegration', deleteTodoLambda);
 
     // Create a resource and method for the API
     httpApi.addRoutes({
@@ -156,6 +182,12 @@ export class BackendStack extends cdk.Stack {
       path: '/todo',
       methods: [HttpMethod.PUT],
       integration: updateTodoLambdaIntegration,
+    });
+
+    httpApi.addRoutes({
+      path: '/todo',
+      methods: [HttpMethod.DELETE],
+      integration: deleteTodoLambdaIntegration,
     });
 
     // Output the API endpoint URL
