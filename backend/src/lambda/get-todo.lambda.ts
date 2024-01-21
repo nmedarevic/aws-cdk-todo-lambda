@@ -1,6 +1,9 @@
 import { APIGatewayProxyEvent, Context, APIGatewayProxyResult } from "aws-lambda"
 import { DynamoDB } from 'aws-sdk';
-import { v4 as uuidv4 } from 'uuid';
+
+function isRunningLocalLambda() {
+  return process.env.AWS_SAM_LOCAL === 'true';
+}
 
 const dbClient = new DynamoDB.DocumentClient({
   region: 'eu-central-1',
@@ -19,7 +22,6 @@ export async function handler(event: APIGatewayProxyEvent, context: Context): Pr
 
   const todoId = event.queryStringParameters.id;
 
-  console.log('\n\n', "Finding todo", todoId, '\n\n');
   try {
     const result = await dbClient.get({
       TableName: table,
@@ -27,8 +29,6 @@ export async function handler(event: APIGatewayProxyEvent, context: Context): Pr
         id: todoId
       },
     } as DynamoDB.Types.GetItemInput).promise()
-
-    console.log('\n\n', "Found todo", result, '\n\n');
 
     if (!result.Item) {
       throw new Error("Todo not found")
@@ -45,10 +45,5 @@ export async function handler(event: APIGatewayProxyEvent, context: Context): Pr
       statusCode: 404,
       body: "Not found"
     }
-  }
-
-  return {
-    statusCode: 200,
-    body: ""
   }
 }
