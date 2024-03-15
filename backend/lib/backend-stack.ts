@@ -1,6 +1,7 @@
 import * as cdk from "aws-cdk-lib";
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
 import * as s3 from "aws-cdk-lib/aws-s3"
+import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as iam from "aws-cdk-lib/aws-iam"
 import * as lambda from "aws-cdk-lib/aws-lambda"
 import * as lambdaEventSource from "aws-cdk-lib/aws-lambda-event-sources"
@@ -11,6 +12,8 @@ import { LogGroup, RetentionDays } from "aws-cdk-lib/aws-logs";
 import { CorsHttpMethod, HttpApi } from "aws-cdk-lib/aws-apigatewayv2";
 import { HttpLambdaIntegration } from "aws-cdk-lib/aws-apigatewayv2-integrations";
 import { HttpMethod } from "aws-cdk-lib/aws-events";
+
+// const lambdaParameterStoreLayer = "arn:aws:lambda:eu-central-1:187925254637:layer:AWS-Parameters-and-Secrets-Lambda-Extension:11"
 
 export class BackendStack extends cdk.Stack {
   constructor(scope?: Construct, id?: string, props?: cdk.StackProps) {
@@ -36,6 +39,16 @@ export class BackendStack extends cdk.Stack {
       })
     )
 
+    // role.addToPolicy(
+    //   new iam.PolicyStatement({
+    //     effect: iam.Effect.ALLOW,
+    //     actions: [
+    //       "ssm:GetParameter",
+    //     ],
+    //     resources: ["*"],
+    //   })
+    // )
+
     /**
      * DynamoDB table for storing TODOs
      */
@@ -48,18 +61,40 @@ export class BackendStack extends cdk.Stack {
 
 
     /**
+     * DB parameters for an external database
+     */
+
+
+
+    // const commonLambdaLayers = [
+    //   lambda.LayerVersion.fromLayerVersionArn(this, "Layer", lambdaParameterStoreLayer)
+    // ]
+
+    const databaseUrl = ssm.StringParameter.valueForStringParameter(
+      this, '/todo-lambda-app/backend/database-url');
+    const databaseReadAccessKey = ssm.StringParameter.valueForStringParameter(
+        this, '/todo-lambda-app/backend/database-token-read-only');
+    const databaseWriteAccessKey = ssm.StringParameter.valueForStringParameter(
+        this, '/todo-lambda-app/backend/database-token-read-write');
+
+    /**
      * Lambda function for saving TODOs
      */
     const saveTodoLambda = new NodejsFunction(this, "lambda-save-todo", {
       // code: lambda.AssetCode.fromAsset("lambda"),
       runtime: lambda.Runtime.NODEJS_20_X,
       entry: path.join(__dirname, "../src/lambda/save-todo.lambda.ts"),
-      functionName: "labmda-save-todo",
+      functionName: "lambda-save-todo",
       handler: "handler",
       role: role,
       environment: {
         TABLE: table.tableName,
-      }
+        DATABASE_URL: databaseUrl,
+        DATABASE_WRITE_ACCESS_KEY: databaseWriteAccessKey,
+      },
+      // layers: [
+      //   ...commonLambdaLayers
+      // ]
     })
 
     /**
@@ -69,12 +104,17 @@ export class BackendStack extends cdk.Stack {
       // code: lambda.AssetCode.fromAsset("lambda"),
       runtime: lambda.Runtime.NODEJS_20_X,
       entry: path.join(__dirname, "../src/lambda/get-todo.lambda.ts"),
-      functionName: "labmda-save-todo",
+      functionName: "lambda-get-todo",
       handler: "handler",
       role: role,
       environment: {
         TABLE: table.tableName,
+        DATABASE_URL: databaseUrl,
+        DATABASE_READ_ACCESS_KEY: databaseReadAccessKey,
       },
+      // layers: [
+      //   ...commonLambdaLayers
+      // ]
     })
 
     /**
@@ -89,7 +129,12 @@ export class BackendStack extends cdk.Stack {
       role: role,
       environment: {
         TABLE: table.tableName,
+        DATABASE_URL: databaseUrl,
+        DATABASE_WRITE_ACCESS_KEY: databaseWriteAccessKey,
       },
+      // layers: [
+      //   ...commonLambdaLayers
+      // ]
     })
 
     /**
@@ -104,7 +149,12 @@ export class BackendStack extends cdk.Stack {
       role: role,
       environment: {
         TABLE: table.tableName,
+        DATABASE_URL: databaseUrl,
+        DATABASE_WRITE_ACCESS_KEY: databaseWriteAccessKey,
       },
+      // layers: [
+      //   ...commonLambdaLayers
+      // ]
     })
 
     table.grantFullAccess(saveTodoLambda)
