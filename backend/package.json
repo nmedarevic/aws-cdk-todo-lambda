@@ -10,7 +10,7 @@
     "test": "jest",
     "cdk": "cdk",
     "synth": "cdk synth",
-    "test-save-todo": "AWS_REGION=eu-central-1 sam local invoke -t ./cdk.out/BackendStack.template.json -e ./events/save-todo.event.json --docker-network lambda-local lambda-save-todo",
+    "test-save-todo": "AWS_REGION=eu-central-1 sam local invoke -t ./cdk.out/BackendStack.template.json -e ./events/save-todo.event.json --docker-network lambda-local lambda-save-todo --env-vars .env.json",
     "test-get-todo": "sam local invoke -t ./cdk.out/BackendStack.template.json -e ./events/get-todo.event.json --docker-network lambda-local lambda-get-todo",
     "test-update-todo": "sam local invoke -t ./cdk.out/BackendStack.template.json -e ./events/update-todo.event.json --docker-network lambda-local lambda-update-todo",
     "test-delete-todo": "sam local invoke -t ./cdk.out/BackendStack.template.json -e ./events/delete-todo.event.json --docker-network lambda-local lambda-delete-todo",
@@ -30,6 +30,7 @@
     "typescript": "~5.3.3"
   },
   "dependencies": {
+    "@libsql/client": "0.3.2",
     "aws-cdk-lib": "2.121.1",
     "aws-lambda": "^1.0.7",
     "constructs": "^10.0.0",
