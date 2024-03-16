@@ -94,7 +94,7 @@ const getLambdaHandler = ({ dbClient }: {dbClient: DBClient}) => {
     const bodyJson = getBody(event)
     
     const item = {
-      id: "b10025b5-cd54-4818-a50b-8331bca0a7ce", //,uuidv4(),
+      id: uuidv4(),
       text: bodyJson.text,
     }
   
