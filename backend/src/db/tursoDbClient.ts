@@ -5,10 +5,13 @@ export class TursoDBClient extends DBClient {
   private client;
 
   constructor(private dependencies: DBClientDependencies) {
-    super(dependencies)
+    super(dependencies);
 
-    if (!this.dependencies.databaseUrl || !this.dependencies.databaseAccessKey) {
-      throw new Error("Missing databaseUrl or databaseAccessKey")
+    if (
+      !this.dependencies.databaseUrl ||
+      !this.dependencies.databaseAccessKey
+    ) {
+      throw new Error("Missing databaseUrl or databaseAccessKey");
     }
 
     this.client = createClient({
