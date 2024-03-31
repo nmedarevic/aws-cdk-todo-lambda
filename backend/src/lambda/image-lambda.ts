@@ -1,6 +1,5 @@
-import { S3Event } from "aws-lambda";
-import { Rekognition, DynamoDB } from 'aws-sdk';
-
+import { S3Event } from 'aws-lambda'
+import { Rekognition, DynamoDB } from 'aws-sdk'
 
 const rekognition = new Rekognition()
 
@@ -14,36 +13,40 @@ export async function handler(event: S3Event, context: any) {
     const bucket = record.s3.bucket.name
     const key = record.s3.object.key
 
-    console.log('\n\n', "Event:", bucket, key, context, '\n\n');
+    console.log('\n\n', 'Event:', bucket, key, context, '\n\n')
 
     const labels = await recognitionFunction(bucket, key)
 
-    console.log('\n\n', "LABELS", labels, '\n\n');
+    console.log('\n\n', 'LABELS', labels, '\n\n')
 
-    const imageLabelsTable = process.env.TABLE || ""
+    const imageLabelsTable = process.env.TABLE || ''
 
-    await dbClient.put({
-      TableName: imageLabelsTable,
-      Item: {
-        image: key,
-        labels: labels
-      }
-    } as DynamoDB.Types.PutItemInput).promise()
+    await dbClient
+      .put({
+        TableName: imageLabelsTable,
+        Item: {
+          image: key,
+          labels: labels,
+        },
+      } as DynamoDB.Types.PutItemInput)
+      .promise()
   }
 }
 
 async function recognitionFunction(bucket: string, key: string) {
   console.log(`Detected image in bucket: ${bucket} Key: ${key}`)
 
-  const { Labels } = await rekognition.detectLabels({
-    Image: {
-      S3Object: {
-        Bucket: bucket,
-        Name: key
-      }
-    },
-    MinConfidence: minConfidence
-  }).promise()
+  const { Labels } = await rekognition
+    .detectLabels({
+      Image: {
+        S3Object: {
+          Bucket: bucket,
+          Name: key,
+        },
+      },
+      MinConfidence: minConfidence,
+    })
+    .promise()
 
   return Labels
 }

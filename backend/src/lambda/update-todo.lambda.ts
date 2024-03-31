@@ -1,5 +1,9 @@
-import { APIGatewayProxyEvent, Context, APIGatewayProxyResult } from "aws-lambda"
-import { DynamoDB } from 'aws-sdk';
+import {
+  APIGatewayProxyEvent,
+  Context,
+  APIGatewayProxyResult,
+} from 'aws-lambda'
+import { DynamoDB } from 'aws-sdk'
 
 const getBody = (event: APIGatewayProxyEvent) => {
   try {
@@ -12,7 +16,7 @@ const getBody = (event: APIGatewayProxyEvent) => {
 }
 
 function isRunningLocalLambda() {
-  return process.env.AWS_SAM_LOCAL === 'true';
+  return process.env.AWS_SAM_LOCAL === 'true'
 }
 
 const dbClient = new DynamoDB.DocumentClient({
@@ -20,47 +24,52 @@ const dbClient = new DynamoDB.DocumentClient({
   endpoint: 'http://localstack:4566',
 })
 
-const table = "todos"
+const table = 'todos'
 
-export async function handler(event: APIGatewayProxyEvent, context: Context): Promise<APIGatewayProxyResult> {
-  console.log('\n\n', "EVENT", '\n\n');
-  console.log('\n\n', event.body, '\n\n');
+export async function handler(
+  event: APIGatewayProxyEvent,
+  context: Context
+): Promise<APIGatewayProxyResult> {
+  console.log('\n\n', 'EVENT', '\n\n')
+  console.log('\n\n', event.body, '\n\n')
 
   const body = getBody(event)
 
-  if (typeof body.id === "undefined") {
-    throw new Error("Missing id")
+  if (typeof body.id === 'undefined') {
+    throw new Error('Missing id')
   }
 
   try {
-    const result = await dbClient.update({
-      TableName: table,
-      Key: {
-        id: body.id,
-      },
-      UpdateExpression: 'SET #ts = :val1',
-      ExpressionAttributeValues: {
-        ":val1": body.text
-      },
-      ExpressionAttributeNames: {
-        "#ts": "text"
-      }
-    } as DynamoDB.Types.UpdateItemInput).promise()
+    const result = await dbClient
+      .update({
+        TableName: table,
+        Key: {
+          id: body.id,
+        },
+        UpdateExpression: 'SET #ts = :val1',
+        ExpressionAttributeValues: {
+          ':val1': body.text,
+        },
+        ExpressionAttributeNames: {
+          '#ts': 'text',
+        },
+      } as DynamoDB.Types.UpdateItemInput)
+      .promise()
 
     if (result.$response.error) {
-      throw new Error("Todo not found")
+      throw new Error('Todo not found')
     }
 
     return {
       statusCode: 200,
-      body: "true"
+      body: 'true',
     }
   } catch (error) {
-    console.error("Error while updating a todo", error);
+    console.error('Error while updating a todo', error)
 
     return {
       statusCode: 404,
-      body: "Not found"
+      body: 'Not found',
     }
   }
 }
