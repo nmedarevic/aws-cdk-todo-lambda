@@ -1,22 +1,22 @@
-import { DynamoDB } from "aws-sdk";
-import { DBClient, DBClientDependencies } from "./dbClient";
+import { DynamoDB } from 'aws-sdk'
+import { DBClient, DBClientDependencies } from './dbClient'
 
-const table = "todo";
+const table = 'todo'
 
 export class DynamoDBClient extends DBClient {
-  private client;
+  private client
 
   constructor(private dependencies: DBClientDependencies) {
-    super(dependencies);
+    super(dependencies)
 
     if (!this.dependencies.databaseUrl || !this.dependencies.region) {
-      throw new Error("Missing databaseUrl or databaseAccessKey");
+      throw new Error('Missing databaseUrl or databaseAccessKey')
     }
 
     this.client = new DynamoDB.DocumentClient({
       region: this.dependencies.region,
       endpoint: this.dependencies.databaseUrl,
-    });
+    })
   }
 
   async saveItem<T extends Object>(item: T) {
@@ -25,6 +25,6 @@ export class DynamoDBClient extends DBClient {
         TableName: table,
         Item: item,
       } as unknown as DynamoDB.Types.PutItemInput)
-      .promise();
+      .promise()
   }
 }
