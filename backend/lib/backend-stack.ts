@@ -68,39 +68,6 @@ export class BackendStack extends cdk.Stack {
     //   },
     // );
 
-    const callbackUrls = []
-
-    callbackUrls.push(authRedirectUrl)
-
-    const appClient = userpool.addClient('todo-app-auth-client', {
-      userPoolClientName: 'todo-app-auth-client',
-      authFlows: {
-        userPassword: true,
-      },
-      oAuth: {
-        flows: {
-          authorizationCodeGrant: true,
-        },
-        callbackUrls: callbackUrls,
-      },
-      // idTokenValidity: cdk.Duration.hours(8),
-      // accessTokenValidity: cdk.Duration.hours(8),
-    })
-
-    const userPoolDomain = userpool.addDomain('MyTodoAppDomain', {
-      cognitoDomain: {
-        domainPrefix: 'prefix-za-domen', // Choose a unique prefix
-      },
-    })
-    const signinUrl = userPoolDomain.signInUrl(appClient, {
-      signInPath: '/login',
-      redirectUri: 'https://nikolamedarevic.com',
-    })
-
-    new cdk.CfnOutput(this, 'Client Id', {
-      value: appClient.userPoolClientId,
-    })
-    new cdk.CfnOutput(this, 'SigninUrl', { value: signinUrl })
 
     /**
      * Role for AWS Lambda
@@ -271,6 +238,54 @@ export class BackendStack extends cdk.Stack {
       })
     )
 
+
+    const oAuthLambda = new NodejsFunction(this, 'oauth-lambda', {
+      // code: lambda.AssetCode.fromAsset("lambda"),
+      runtime: lambda.Runtime.NODEJS_20_X,
+      entry: path.join(__dirname, '../src/lambda/auth/oauth.lambda.ts'),
+      functionName: 'lambda-oauth',
+      handler: 'handler',
+      role: role,
+      environment: {},
+    })
+    const oauthLogGroup = new LogGroup(
+      this,
+      '/aws/lambda/auth/oauth',
+      {
+        retention: RetentionDays.ONE_DAY,
+      }
+    )
+    oauthLogGroup.addToResourcePolicy(
+      new iam.PolicyStatement({
+        actions: ['logs:CreateLogStream', 'logs:PutLogEvents'],
+        principals: [new iam.ServicePrincipal('lambda.amazonaws.com')],
+        resources: [oauthLogGroup.logGroupArn],
+      })
+    )
+    
+    const oAuthHttpApi = new HttpApi(this, "oauth-http-api", {
+      corsPreflight: {
+        allowMethods: [CorsHttpMethod.GET],
+        allowOrigins: ["*"],
+      }
+    })
+    const oauthLambdaIntegration = new HttpLambdaIntegration(
+      "oAuthLambdaIntegration",
+      oAuthLambda
+    )
+    oAuthHttpApi.addRoutes({
+      path: '/oauth',
+      methods: [HttpMethod.GET],
+      integration: oauthLambdaIntegration,
+    })
+
+    new cdk.CfnOutput(this, 'Lambda OAuth Api', {
+      value: oAuthHttpApi.apiEndpoint,
+    })
+
+
+
+
     // Create an API Gateway
     const httpApi = new HttpApi(this, 'lambda-todo-api', {
       apiName: 'Lambda TODO API',
@@ -331,5 +346,41 @@ export class BackendStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'Lambda Todo API', {
       value: httpApi.apiEndpoint,
     })
+
+
+    const callbackUrls = []
+
+    callbackUrls.push(`${oAuthHttpApi.apiEndpoint}/oauth`)
+
+    const appClient = userpool.addClient('todo-app-auth-client', {
+      userPoolClientName: 'todo-app-auth-client',
+      authFlows: {
+        userPassword: true,
+      },
+      oAuth: {
+        flows: {
+          authorizationCodeGrant: true,
+        },
+        callbackUrls: callbackUrls,
+      },
+      // idTokenValidity: cdk.Duration.hours(8),
+      // accessTokenValidity: cdk.Duration.hours(8),
+    })
+
+    const userPoolDomain = userpool.addDomain('MyTodoAppDomain', {
+      cognitoDomain: {
+        domainPrefix: 'prefix-za-domen', // Choose a unique prefix
+      },
+    })
+    const signinUrl = userPoolDomain.signInUrl(appClient, {
+      signInPath: '/login',
+      redirectUri: `${oAuthHttpApi.apiEndpoint}/oauth`,
+    })
+
+    new cdk.CfnOutput(this, 'Client Id', {
+      value: appClient.userPoolClientId,
+    })
+    new cdk.CfnOutput(this, 'SigninUrl', { value: signinUrl })
+
   }
 }
